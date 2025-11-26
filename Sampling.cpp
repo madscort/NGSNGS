@@ -184,9 +184,9 @@ void* Sampling_threads(void *arg) {
         assert(fragmentLength < LENS);
         memset(FragmentSequence,0,LENS);
         // Copy first segment - end of the chromosome 
-        strncpy(FragmentSequence, chrseq + segment1_start, segment1_length);
+        memcpy(FragmentSequence, chrseq + segment1_start, segment1_length);
         // Copy second segment to the correct position - start of the chromosome
-        strncpy(FragmentSequence + segment1_length, chrseq + segment2_start, segment2_length);
+        memcpy(FragmentSequence + segment1_length, chrseq + segment2_start, segment2_length);
       }
       else{
         // linear fragment
@@ -194,7 +194,7 @@ void* Sampling_threads(void *arg) {
         assert(posE>=posB&&fragmentLength>20);
         assert(fragmentLength < LENS);
         memset(FragmentSequence,0,LENS);
-        strncpy(FragmentSequence,chrseq+(posB),fragmentLength);
+        memcpy(FragmentSequence,chrseq+(posB),fragmentLength);
       }
     }
     else{
@@ -203,7 +203,7 @@ void* Sampling_threads(void *arg) {
       assert(posE>=posB&&fragmentLength>20);
       assert(fragmentLength < LENS);
       memset(FragmentSequence,0,LENS);
-      strncpy(FragmentSequence,chrseq+(posB),fragmentLength); // same orientation as reference genome 5' -------> FWD -------> 3'
+      memcpy(FragmentSequence,chrseq+(posB),fragmentLength); // same orientation as reference genome 5' -------> FWD -------> 3'
     }
 
     FragmentSequence[fragmentLength] = '\0';
