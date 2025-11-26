@@ -812,6 +812,13 @@ int extend_fasta_sampler(fasta_sampler *fs,int fs_chr_idx,int ploidy,const char*
     int *seqs_l = new int[nref];
     int *realnameidx = new int[nref];
     int *pldmap = new int[5];
+    
+    // Zero-initialize all new arrays
+    memset(seqs, 0, sizeof(char*)*nref);
+    memset(seqs_names, 0, sizeof(char*)*nref);
+    memset(seqs_l, 0, sizeof(int)*nref);
+    memset(realnameidx, 0, sizeof(int)*nref);
+    memset(pldmap, 0, sizeof(int)*5);
 
     // Copy existing sequences and metadata
     for(int i=0;i<fs->nref;i++){
@@ -839,7 +846,7 @@ int extend_fasta_sampler(fasta_sampler *fs,int fs_chr_idx,int ploidy,const char*
     pldmap[0] = fs_chr_idx;
     for(int i=1;i<ploidy;i++) {
       snprintf(buf,1024,"%s_%s_allele_%d",fs->seqs_names[fs_chr_idx],sample_name,i);
-      fs->seqs[fs->nref+i-1] = strdup(seqs[fs_chr_idx]);
+      fs->seqs[fs->nref+i-1] = strdup(fs->seqs[fs_chr_idx]);
       fs->seqs_names[fs->nref+i-1] = strdup(buf);
       fs->seqs_l[fs->nref+i-1] = fs->seqs_l[fs_chr_idx];
       fs->char2idx[fs->seqs_names[fs->nref+i-1]] =fs->nref+i-1;
