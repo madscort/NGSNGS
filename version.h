@@ -1,0 +1,2 @@
+#define NGSNGS_RELEASE "v0.9.2.2"
+#define NGSNGS_VERSION "9422b47"

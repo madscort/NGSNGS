@@ -1,9 +1,24 @@
+#include <cstdint>
 #include <map>
 #include <htslib/vcf.h>
 #include "fasta_sampler.h"
 #include "add_variants.h"
 
 int ChromCounterErrMsg = 0;
+static int findBedRegionIndex(fasta_sampler *fs, const char *chrom, int64_t pos){
+  if(!fs->bedIncludeMode || fs->BedReferenceEntries==NULL || chrom==NULL)
+    return -1;
+  auto it = fs->BedRegionsByChrom.find(chrom);
+  if(it==fs->BedRegionsByChrom.end())
+    return -1;
+  int64_t coordinate = pos + 1;
+  for(int idx : it->second){
+    BedEntry &entry = fs->BedReferenceEntries[idx];
+    if(coordinate >= entry.start && coordinate <= entry.end)
+      return idx;
+  }
+  return -1;
+}
 int *fabcflookup(bcf_hdr_t *bcf_hdr,char2int &fai2idx,int &maxIndex){
   /*
     fabcflookup - Creates a lookup table for chromosome indices between a BCF header and a FASTA index, and compares if chromosome names in the BCF header with those in the FASTA index
@@ -422,7 +437,10 @@ int add_vcf_variants(fasta_sampler *fs,const char *bcffilename,int id,const char
   bcf1_t *brec = bcf_init();
 
   int max_l; //maximum index of matched chromosomes - as of 27-08-2024 it remains unused but has during testing been useful.
-  int *bcf_idx_2_fasta_idx = fabcflookup(bcf_head,fs->char2idx,max_l);
+  bool bed_include_mode = fs->bedIncludeMode && fs->BedReferenceCount > 0;
+  int *bcf_idx_2_fasta_idx = NULL;
+  if(!bed_include_mode)
+    bcf_idx_2_fasta_idx = fabcflookup(bcf_head,fs->char2idx,max_l);
   int ret = -1;
   int nsamples = bcf_hdr_nsamples(bcf_head);
   int32_t ngt_arr = 0;     
@@ -468,8 +486,21 @@ int add_vcf_variants(fasta_sampler *fs,const char *bcffilename,int id,const char
   // read the variants and information present within vcf file
   while(((ret=bcf_read(bcf,bcf_head,brec)))==0){
     bcf_unpack((bcf1_t*)brec, BCF_UN_ALL); // extract info
-    int fai_chr = bcf_idx_2_fasta_idx[brec->rid];
-    
+    int64_t abs_pos = brec->pos;
+    int rel_pos = (int)abs_pos;
+    int fai_chr = -1;
+    const char *chrom_name = bcf_hdr_id2name(bcf_head, brec->rid);
+    if(bed_include_mode){
+      fai_chr = findBedRegionIndex(fs, chrom_name, abs_pos);
+      if(fai_chr == -1){
+        fprintf(stderr, "\t-> Variant %s:%lld falls outside included regions, skipping\n", chrom_name?chrom_name:"?", (long long)(abs_pos+1));
+        continue;
+      }
+      rel_pos = (int)(abs_pos + 1 - fs->BedReferenceEntries[fai_chr].start);
+    }
+    else{
+      fai_chr = bcf_idx_2_fasta_idx[brec->rid];
+    }
     if (fai_chr == -1) {
       fprintf(stderr, "Error: Chromosome name not found in the reference\n");
       bcf_hdr_destroy(bcf_head);
@@ -477,6 +508,7 @@ int add_vcf_variants(fasta_sampler *fs,const char *bcffilename,int id,const char
       bcf_close(bcf);
       exit(1);
     }
+    brec->pos = rel_pos;
 
     // extract genotype information
     ngt = bcf_get_genotypes(bcf_head, brec, &gt_arr, &ngt_arr);
@@ -486,7 +518,7 @@ int add_vcf_variants(fasta_sampler *fs,const char *bcffilename,int id,const char
 
     mygt = gt_arr+inferred_ploidy*whichsample;
     if(bcf_gt_is_missing(mygt[0])){
-      fprintf(stderr,"\t-> Genotype is missing for pos: %ld will skip\n",brec->pos+1);
+      fprintf(stderr,"\t-> Genotype is missing for pos: %lld will skip\n",(long long)(abs_pos+1));
       continue;
     }
 

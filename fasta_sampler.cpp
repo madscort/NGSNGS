@@ -99,6 +99,7 @@ fasta_sampler *fasta_sampler_alloc_full(const char *fa){
   // Initialize the number of references and allocate memory for sequence data,
   fs->BedReferenceEntries = NULL; // the bedreference is part of the struct but remains unused in this function
   fs->BedReferenceCount = 0;
+  fs->bedIncludeMode = false;
   
   fs->nref = faidx_nseq(fs->fai);
   fs->seqs = new char* [fs->nref];
@@ -186,6 +187,7 @@ fasta_sampler *fasta_sampler_alloc_subset(const char *fa,const char *SpecificChr
     }
   }
   fs->nref = at;
+  fs->bedIncludeMode = false;
   
   for(int i=0;i<fs->nref;i++)
     fs->realnameidx[i] = i;
@@ -242,6 +244,9 @@ fasta_sampler *fasta_sampler_alloc_bedentry(const char *fa,const char *bedfilena
   //Check if merged regions of interest is present within provided reference file
   fs->BedReferenceEntries = checkbedentriesfasta(fs,mergedEntries,mergedCount,&fs->BedReferenceCount);
 
+  fs->bedIncludeMode = true;
+  fs->BedRegionsByChrom.clear();
+
   //for (int i = 0; i < fs->BedReferenceCount; i++){fprintf(stderr,"merge bed file information bed entry \t%s\t%d\t%d\n", fs->BedReferenceEntries[i].chromosome, fs->BedReferenceEntries[i].start, fs->BedReferenceEntries[i].end);}
 
   free(mergedEntries);
@@ -288,6 +293,10 @@ fasta_sampler *fasta_sampler_alloc_bedentry(const char *fa,const char *bedfilena
     int length = snprintf(NULL, 0, "%s:%d-%d", fs->BedReferenceEntries[i].chromosome, bedflankstart, bedflankend);
     fs->seqs_names[i] = (char*) malloc((length + 1) * sizeof(char));
     sprintf(fs->seqs_names[i], "%s:%d-%d", fs->BedReferenceEntries[i].chromosome, bedflankstart, bedflankend);
+  }
+
+  for(int i=0;i<fs->nref;i++){
+    fs->BedRegionsByChrom[fs->BedReferenceEntries[i].chromosome].push_back(i);
   }
 
   // Fetch and store sequence names, lengths, and actual sequences for regions of interest
@@ -349,6 +358,8 @@ fasta_sampler *fasta_sampler_alloc_maskbedentry(const char *fa,const char *bedfi
 
   //Exclude (mask) merged genomic regions from the provided reference file
   fs->BedReferenceEntries = maskbedentriesfasta(fs,mergedEntries,mergedCount,&fs->BedReferenceCount);
+  fs->bedIncludeMode = false;
+  fs->BedRegionsByChrom.clear();
   
   //fprintf(stderr,"\t-> Input bed file had %d regions, after merging the overlapping regions there is %d and post-filtering there is %d\n",BedEntryCount,mergedCount,fs->BedReferenceCount);
   //for (int i = 0; i < fs->BedReferenceCount; i++){fprintf(stderr,"merge bed file information mask bed entry \t%s\t%d\t%d\n", fs->BedReferenceEntries[i].chromosome, fs->BedReferenceEntries[i].start, fs->BedReferenceEntries[i].end);}

@@ -6,5 +6,5 @@
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
 ##INFO=<ID=DP,Number=1,Type=Integer,Description="Total read depth">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	HG00096	HG00097	HG00099
-MT	10	.	T	C	100	PASS	.	GT	1|1	0|0	1|0
-MT	25	.	A	G	100	PASS	.	GT	1|1	0|0	1|0
+MT	3	.	T	TAAA	100	PASS	.	GT	1|1	0|0	0|1
+MT	4	.	C	T	100	PASS	.	GT	0|0	1|1	0|1
