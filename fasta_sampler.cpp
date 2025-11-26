@@ -638,6 +638,11 @@ char *sample(fasta_sampler *fs,mrand_t *mr,char **chromoname,int &chr_idx,int &p
   if(posE>=fs->seqs_l[chr_idx] && simmode == 0){
     posE=fs->seqs_l[chr_idx];
     posB=posE-fraglength;
+    // Ensure posB doesn't go negative for short sequences
+    if(posB < 0) {
+      posB = 0;
+      posE = (fraglength < fs->seqs_l[chr_idx]) ? fraglength : fs->seqs_l[chr_idx];
+    }
   }
   
   // extract and return the sequence of the selected chromosome
