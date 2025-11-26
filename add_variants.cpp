@@ -145,6 +145,7 @@ void add_indels_simple(fasta_sampler *fs,bcfmap &mybcfmap,bcf_hdr_t *hdr,int plo
           fs->seqs_l[fsoffsets[i]] = strlen(indels[i]);
           free(fs->seqs[fsoffsets[i]]);
           fs->seqs[fsoffsets[i]] = indels[i]; // replace fasta reference sequence with updated indel sequence
+          indels[i] = (char*) calloc(maxsize,sizeof(char)); // prepare builder for next chromosome
         }
       }
 
@@ -228,6 +229,7 @@ void add_indels_simple(fasta_sampler *fs,bcfmap &mybcfmap,bcf_hdr_t *hdr,int plo
       fs->seqs_l[fsoffsets[i]] = strlen(indels[i]);
       free(fs->seqs[fsoffsets[i]]);
       fs->seqs[fsoffsets[i]] = indels[i];
+      indels[i] = NULL; // no further use after final assignment
     }
   }
   delete[] indels;
@@ -286,6 +288,7 @@ void add_ins_complex(fasta_sampler *fs,bcfmap &mybcfmap,bcf_hdr_t *hdr,int ploid
           fs->seqs_l[fsoffsets[i]] = strlen(indels[i]);
           free(fs->seqs[fsoffsets[i]]);
           fs->seqs[fsoffsets[i]] = indels[i];
+          indels[i] = (char*) calloc(maxsize,sizeof(char)); // prepare builder for next chromosome
         }
       }
 
@@ -362,15 +365,16 @@ void add_ins_complex(fasta_sampler *fs,bcfmap &mybcfmap,bcf_hdr_t *hdr,int ploid
     delete [] it->first.gt;
   }
     if(fsoffsets!=NULL){
-    // Finalize the sequences for the last processed chromosome
-    for(int i=0;i<ploidy;i++){
+      // Finalize the sequences for the last processed chromosome
+      for(int i=0;i<ploidy;i++){
       
-      strcat(indels[i],fs->seqs[fsoffsets[i]]+last[i]);
-      fs->seqs_l[fsoffsets[i]] = strlen(indels[i]);
-      free(fs->seqs[fsoffsets[i]]);
-      fs->seqs[fsoffsets[i]] = indels[i];
+        strcat(indels[i],fs->seqs[fsoffsets[i]]+last[i]);
+        fs->seqs_l[fsoffsets[i]] = strlen(indels[i]);
+        free(fs->seqs[fsoffsets[i]]);
+        fs->seqs[fsoffsets[i]] = indels[i];
+        indels[i] = NULL;
+      }
     }
-  }
   delete[] indels;
 }
 
