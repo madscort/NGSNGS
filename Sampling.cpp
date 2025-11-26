@@ -162,6 +162,8 @@ void* Sampling_threads(void *arg) {
     // Selecting genomic start position across the generated contiguous contigs for which to extract 
     int chr_idx = -1;
     int posB = 0; int posE = 0;
+    int skipread = 0; // Initialize skipread to 0
+    
     //get shallow copy of chromosome, offset into, is defined by posB, and posE
     size_t chr_end;
     char *chrseq = sample(struct_obj->reffasta,rand_alloc,&chr,chr_idx,posB,posE,fraglength,chr_end,struct_obj->simmode);
@@ -180,6 +182,11 @@ void* Sampling_threads(void *arg) {
         size_t segment2_start = 0;
         size_t segment2_length = posE-chr_end; 
 
+        // Clamp segment2_length to not exceed available sequence
+        if(segment2_length > chr_end) {
+          segment2_length = chr_end;
+        }
+
         fragmentLength = segment1_length + segment2_length;
         assert(fragmentLength < LENS);
         memset(FragmentSequence,0,LENS);
@@ -193,6 +200,16 @@ void* Sampling_threads(void *arg) {
         fragmentLength=posE-posB;
         assert(posE>=posB&&fragmentLength>20);
         assert(fragmentLength < LENS);
+        
+        // Clamp fragment to not exceed buffer
+        if(posE > chr_end) {
+          fragmentLength = chr_end - posB;
+          if(fragmentLength < 20) {
+            skipread = 1;
+            continue;
+          }
+        }
+        
         memset(FragmentSequence,0,LENS);
         memcpy(FragmentSequence,chrseq+(posB),fragmentLength);
       }
@@ -202,13 +219,21 @@ void* Sampling_threads(void *arg) {
       fragmentLength=posE-posB;
       assert(posE>=posB&&fragmentLength>20);
       assert(fragmentLength < LENS);
+      
+      // Clamp fragment to not exceed buffer
+      if(posE > chr_end) {
+        fragmentLength = chr_end - posB;
+        if(fragmentLength < 20) {
+          skipread = 1;
+          continue;
+        }
+      }
+      
       memset(FragmentSequence,0,LENS);
       memcpy(FragmentSequence,chrseq+(posB),fragmentLength); // same orientation as reference genome 5' -------> FWD -------> 3'
     }
 
     FragmentSequence[fragmentLength] = '\0';
-
-    int skipread = 0; // Initialize skipread to 0
 
     // assuming original fragments with N at first and last position is more likely to originate from heterochromatin regions fully consisting of N
     if(FragmentSequence[0]=='N' && FragmentSequence[(int)strlen(FragmentSequence)-1]=='N'){
