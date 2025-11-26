@@ -180,7 +180,9 @@ void* Sampling_threads(void *arg) {
         size_t segment2_start = 0;
         size_t segment2_length = posE-chr_end; 
 
-        memset(FragmentSequence,0,strlen(FragmentSequence));
+        fragmentLength = segment1_length + segment2_length;
+        assert(fragmentLength < LENS);
+        memset(FragmentSequence,0,LENS);
         // Copy first segment - end of the chromosome 
         strncpy(FragmentSequence, chrseq + segment1_start, segment1_length);
         // Copy second segment to the correct position - start of the chromosome
@@ -190,24 +192,28 @@ void* Sampling_threads(void *arg) {
         // linear fragment
         fragmentLength=posE-posB;
         assert(posE>=posB&&fragmentLength>20);
-        memset(FragmentSequence,0,strlen(FragmentSequence));
-        strncpy(FragmentSequence,chrseq+(posB),fraglength);
+        assert(fragmentLength < LENS);
+        memset(FragmentSequence,0,LENS);
+        strncpy(FragmentSequence,chrseq+(posB),fragmentLength);
       }
     }
     else{
       //linear simulation
       fragmentLength=posE-posB;
       assert(posE>=posB&&fragmentLength>20);
-      memset(FragmentSequence,0,strlen(FragmentSequence));
-      strncpy(FragmentSequence,chrseq+(posB),fraglength); // same orientation as reference genome 5' -------> FWD -------> 3'
+      assert(fragmentLength < LENS);
+      memset(FragmentSequence,0,LENS);
+      strncpy(FragmentSequence,chrseq+(posB),fragmentLength); // same orientation as reference genome 5' -------> FWD -------> 3'
     }
+
+    FragmentSequence[fragmentLength] = '\0';
 
     int skipread = 0; // Initialize skipread to 0
 
     // assuming original fragments with N at first and last position is more likely to originate from heterochromatin regions fully consisting of N
     if(FragmentSequence[0]=='N' && FragmentSequence[(int)strlen(FragmentSequence)-1]=='N'){
       skipread = 1;
-      memset(FragmentSequence,0,strlen(FragmentSequence));
+      memset(FragmentSequence,0,LENS);
       sampled_skipped++;
       continue;
     }
