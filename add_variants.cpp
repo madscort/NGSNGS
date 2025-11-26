@@ -611,8 +611,9 @@ int add_vcf_variants(fasta_sampler *fs,const char *bcffilename,int id,const char
     snprintf(chr_reg_tmp,sizeof(chr_reg_tmp),"%s",fs->seqs_names[i]);      
 
     int new_length = snprintf(NULL, 0, "%s_%s_allele_0",fs->seqs_names[i],sample_name);
-    //fprintf(stderr,"number of ref %d \t ref name %s_%s_allele_%d \t pos %s\n",i,fs->seqs_names[j],sample_name,j,position);
-    fs->seqs_names[i] = (char*) realloc(fs->seqs_names[i], (new_length + 1) * sizeof(char));
+    char *old_name = fs->seqs_names[i];
+    fs->char2idx.erase(old_name);
+    fs->seqs_names[i] = (char*) realloc(old_name, (new_length + 1) * sizeof(char));
     fs->char2idx[fs->seqs_names[i]] = i;
     snprintf(fs->seqs_names[i], new_length + 1, "%s_%s_allele_0",chr_reg_tmp,sample_name);
   }
