@@ -346,6 +346,7 @@ void* Sampling_threads(void *arg) {
 
     // copy part of the DNA molecule into sequencing reads for both single-end and paired-end
     for (int FragNo = 0+Groupshift; FragNo < FragTotal; FragNo+=iter){
+      skipread = 0; // Reset for each fragment iteration
       qual_r1[0] = qual_r2[0] = seq_r1[0] = seq_r2[0] = '\0';
 
       if(SE==struct_obj->SeqType){
