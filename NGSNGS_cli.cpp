@@ -67,6 +67,7 @@ argStruct *getpars(int argc,char ** argv){
   mypars->generations = 1;
   mypars->referencevariations = 0;
   mypars->VariantDumpFile = NULL;
+  mypars->AppliedVariantFile = NULL;
   
   // Fragment lengths
   mypars->CycleLength = 0; 
@@ -270,6 +271,9 @@ argStruct *getpars(int argc,char ** argv){
     else if(strcasecmp("-DumpVar",*argv)==0){
       mypars->VariantDumpFile = strdup(*(++argv));
     }
+    else if(strcasecmp("--vcf-applied",*argv)==0){
+      mypars->AppliedVariantFile = strdup(*(++argv));
+    }
     else if(strcasecmp("-circ",*argv)==0 || strcasecmp("--circular",*argv)==0){
       mypars->simmode = 1;
     }
@@ -388,6 +392,7 @@ void argStruct_destroy(argStruct *mypars){
   if(mypars->BedFile)
     free(mypars->BedFile);
   free(mypars->vcffile);
+    free(mypars->AppliedVariantFile);
   free(mypars->Adapter1);
   free(mypars->Adapter2);
   free(mypars->QualProfile1);

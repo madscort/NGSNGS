@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <cstring>
+#include <cstdio>
 #include <htslib/vcf.h>
 #include "fasta_sampler.h"
 #include "add_variants.h"
@@ -414,7 +415,7 @@ void add_snp(fasta_sampler *fs, int fs_chr_idx,int pos,char **alleles, int32_t *
 }
 
 //if minus one then ref and alt fields are used, if nonnegative then it is used as offset to which genotype to use from the GT fields
-int add_vcf_variants(fasta_sampler *fs,const char *bcffilename,int id,const char* Name){
+int add_vcf_variants(fasta_sampler *fs,const char *bcffilename,int id,const char* Name,const char* AppliedVariantFile){
   /*
     add_vcf_variants - Processes VCF (Variant Call Format) file to add SNPs, insertions, and deletions to the input reference contig sequence creating internal copies to accomodate the alternatives.
   
@@ -431,6 +432,16 @@ int add_vcf_variants(fasta_sampler *fs,const char *bcffilename,int id,const char
 
   if(bcffilename==NULL)
     return 0;
+
+  FILE *applied_fp = NULL;
+  if(AppliedVariantFile!=NULL){
+    applied_fp = fopen(AppliedVariantFile,"w");
+    if(applied_fp==NULL){
+      fprintf(stderr,"Error: Unable to open applied variant output file %s\n",AppliedVariantFile);
+      exit(1);
+    }
+    fprintf(applied_fp,"CHROM\tPOS\tREF\tALT\n");
+  }
 
   // store the original fasta file entries, as the number is altered during sequence alteration and duplication
   int OrigFastaEntry = fs->nref;
@@ -482,6 +493,10 @@ int add_vcf_variants(fasta_sampler *fs,const char *bcffilename,int id,const char
     bcf_hdr_destroy(bcf_head);
     bcf_destroy(brec);
     bcf_close(bcf);
+    if(applied_fp){
+      fclose(applied_fp);
+      applied_fp = NULL;
+    }
     exit(1);
   }
   
@@ -511,6 +526,10 @@ int add_vcf_variants(fasta_sampler *fs,const char *bcffilename,int id,const char
       bcf_hdr_destroy(bcf_head);
       bcf_destroy(brec);
       bcf_close(bcf);
+      if(applied_fp){
+        fclose(applied_fp);
+        applied_fp = NULL;
+      }
       exit(1);
     }
     brec->pos = rel_pos;
@@ -536,6 +555,18 @@ int add_vcf_variants(fasta_sampler *fs,const char *bcffilename,int id,const char
       int issnp = 0;
       int isindel  = 0;
       key.gt[i] = bcf_gt_allele(mygt[i]);
+
+      if(applied_fp && key.gt[i] > 0){
+        const char *ref = brec->d.allele[0];
+        const char *alt = brec->d.allele[key.gt[i]];
+        if(ref!=NULL && alt!=NULL){
+          fprintf(applied_fp,"%s\t%lld\t%s\t%s\n",
+                  chrom_name ? chrom_name : ".",
+                  (long long)(abs_pos+1),
+                  ref,
+                  alt);
+        }
+      }
 
       int ref_length = strlen(brec->d.allele[0]);
       int alt_length = strlen(brec->d.allele[bcf_gt_allele(mygt[i])]);
@@ -621,6 +652,10 @@ int add_vcf_variants(fasta_sampler *fs,const char *bcffilename,int id,const char
       bcf_hdr_destroy(bcf_head);
       bcf_destroy(brec);
       bcf_close(bcf);
+      if(applied_fp){
+        fclose(applied_fp);
+        applied_fp = NULL;
+      }
       return -1;
     }
     fs->seqs_names[i] = new_name;
@@ -634,6 +669,10 @@ int add_vcf_variants(fasta_sampler *fs,const char *bcffilename,int id,const char
   bcf_hdr_destroy(bcf_head);
   bcf_destroy(brec); 
   bcf_close(bcf);
+  if(applied_fp){
+    fclose(applied_fp);
+    applied_fp = NULL;
+  }
   return 0;
 }
 
@@ -652,7 +691,7 @@ int main(int argc,char **argv){
   fprintf(stderr,"Done adding fasta, will now add variants\n");
   fasta_sampler_print(stderr,fs);
 
-  add_vcf_variants(fs,vcf,1);
+  add_vcf_variants(fs,vcf,1,NULL,NULL);
   fasta_sampler_print(stderr,fs);
   char *chr; //this is an unallocated pointer to a chromosome name, eg chr1, chrMT etc
   int chr_idx;

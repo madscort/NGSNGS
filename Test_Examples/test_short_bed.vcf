@@ -1,0 +1,7 @@
+##fileformat=VCFv4.2
+##contig=<ID=MT,length=500>
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	sample1
+MT	60	.	A	G	.	PASS	.	GT	0/1
+MT	110	.	T	C	.	PASS	.	GT	0/1
+MT	210	.	G	A	.	PASS	.	GT	1/1
+MT	310	.	C	T	.	PASS	.	GT	0/1

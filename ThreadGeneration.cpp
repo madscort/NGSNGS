@@ -56,7 +56,7 @@ void* ThreadInitialization(const char* version,char CommandArray[LENS],int threa
                         int doMisMatchErr,const char* SubProfile,int MisLength,const char* MisMatchMatrix,const char* M3outname,
                         float BriggsParam[4],int DoNonBiotin,int DoBiotin,int Duplicates,
                         double mutationrate, size_t referencevariations, int generations,char* VariationfileDump,
-                        const char *VariantFile,int HeaderIndivIdx,const char* NameIndiv,const char* VCFfileDump,int CaptureVCF,int linkage,
+                        const char *VariantFile,int HeaderIndivIdx,const char* NameIndiv,const char* VCFfileDump,const char* AppliedVariantFile,int CaptureVCF,int linkage,
                         float IndelFuncParam[4],int DoIndel,const char* IndelDumpFile){
 
 
@@ -167,7 +167,7 @@ void* ThreadInitialization(const char* version,char CommandArray[LENS],int threa
 
   // biological variants for a given individual within a population
   if(VariantFile && CaptureVCF == 0 && linkage == 0){
-    add_vcf_variants(reffasta,VariantFile,HeaderIndivIdx,NameIndiv);
+    add_vcf_variants(reffasta,VariantFile,HeaderIndivIdx,NameIndiv,AppliedVariantFile);
     if(VCFfileDump!=NULL){
       char dumpfile1[512];
       const char* dumpfile1prefix = VCFfileDump;
