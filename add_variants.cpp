@@ -613,7 +613,17 @@ int add_vcf_variants(fasta_sampler *fs,const char *bcffilename,int id,const char
     int new_length = snprintf(NULL, 0, "%s_%s_allele_0",fs->seqs_names[i],sample_name);
     char *old_name = fs->seqs_names[i];
     fs->char2idx.erase(old_name);
-    fs->seqs_names[i] = (char*) realloc(old_name, (new_length + 1) * sizeof(char));
+    char *new_name = (char*) realloc(old_name, (new_length + 1) * sizeof(char));
+    if(new_name==NULL){
+      fprintf(stderr,"Error: unable to reallocate memory for sequence name %s\n", old_name);
+      free(gt_arr);
+      delete[] bcf_idx_2_fasta_idx;
+      bcf_hdr_destroy(bcf_head);
+      bcf_destroy(brec);
+      bcf_close(bcf);
+      return -1;
+    }
+    fs->seqs_names[i] = new_name;
     fs->char2idx[fs->seqs_names[i]] = i;
     snprintf(fs->seqs_names[i], new_length + 1, "%s_%s_allele_0",chr_reg_tmp,sample_name);
   }
