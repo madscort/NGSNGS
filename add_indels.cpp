@@ -88,6 +88,8 @@ void add_indel(mrand_t *mr,char *frag,int readlength,double *pars,char *INDEL_IN
     }
     beg++;
   }
+  // Ensure the modified fragment ends with a null terminator
+  frag[end] = '\0';
   //store the information into our file
   if (ops[0] == 0){
     snprintf(INDEL_INFO,1024,"%d\tNA\t%d\t%s\t%d\t%ld",ops[0],ops[1],DelOps,fragbefore,strlen(frag));

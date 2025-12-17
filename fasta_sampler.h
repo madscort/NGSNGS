@@ -4,6 +4,8 @@
 #include <cstdio>//for stderr
 #include <cassert>//for assert
 #include <map> //for map
+#include <string>
+#include <vector>
 #include "RandSampling.h"
 #include "mrand.h"
 #include <htslib/faidx.h>
@@ -47,6 +49,8 @@ typedef struct{
   ploidymap  pldmap;
   BedEntry* BedReferenceEntries;
   int BedReferenceCount;
+  bool bedIncludeMode;
+  std::map<std::string,std::vector<int>> BedRegionsByChrom;
 }fasta_sampler;
 
 fasta_sampler *fasta_sampler_alloc_full(const char *fa);

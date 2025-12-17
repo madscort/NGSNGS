@@ -162,6 +162,8 @@ void* Sampling_threads(void *arg) {
     // Selecting genomic start position across the generated contiguous contigs for which to extract 
     int chr_idx = -1;
     int posB = 0; int posE = 0;
+    int skipread = 0; // Initialize skipread to 0
+    
     //get shallow copy of chromosome, offset into, is defined by posB, and posE
     size_t chr_end;
     char *chrseq = sample(struct_obj->reffasta,rand_alloc,&chr,chr_idx,posB,posE,fraglength,chr_end,struct_obj->simmode);
@@ -180,34 +182,63 @@ void* Sampling_threads(void *arg) {
         size_t segment2_start = 0;
         size_t segment2_length = posE-chr_end; 
 
-        memset(FragmentSequence,0,strlen(FragmentSequence));
+        // Clamp segment2_length to not exceed available sequence
+        if(segment2_length > chr_end) {
+          segment2_length = chr_end;
+        }
+
+        fragmentLength = segment1_length + segment2_length;
+        assert(fragmentLength < LENS);
+        memset(FragmentSequence,0,LENS);
         // Copy first segment - end of the chromosome 
-        strncpy(FragmentSequence, chrseq + segment1_start, segment1_length);
+        memcpy(FragmentSequence, chrseq + segment1_start, segment1_length);
         // Copy second segment to the correct position - start of the chromosome
-        strncpy(FragmentSequence + segment1_length, chrseq + segment2_start, segment2_length);
+        memcpy(FragmentSequence + segment1_length, chrseq + segment2_start, segment2_length);
       }
       else{
         // linear fragment
         fragmentLength=posE-posB;
         assert(posE>=posB&&fragmentLength>20);
-        memset(FragmentSequence,0,strlen(FragmentSequence));
-        strncpy(FragmentSequence,chrseq+(posB),fraglength);
+        assert(fragmentLength < LENS);
+        
+        // Clamp fragment to not exceed buffer
+        if(posE > chr_end) {
+          fragmentLength = chr_end - posB;
+          if(fragmentLength < 20) {
+            skipread = 1;
+            continue;
+          }
+        }
+        
+        memset(FragmentSequence,0,LENS);
+        memcpy(FragmentSequence,chrseq+(posB),fragmentLength);
       }
     }
     else{
       //linear simulation
       fragmentLength=posE-posB;
       assert(posE>=posB&&fragmentLength>20);
-      memset(FragmentSequence,0,strlen(FragmentSequence));
-      strncpy(FragmentSequence,chrseq+(posB),fraglength); // same orientation as reference genome 5' -------> FWD -------> 3'
+      assert(fragmentLength < LENS);
+      
+      // Clamp fragment to not exceed buffer
+      if(posE > chr_end) {
+        fragmentLength = chr_end - posB;
+        if(fragmentLength < 20) {
+          skipread = 1;
+          continue;
+        }
+      }
+      
+      memset(FragmentSequence,0,LENS);
+      memcpy(FragmentSequence,chrseq+(posB),fragmentLength); // same orientation as reference genome 5' -------> FWD -------> 3'
     }
 
-    int skipread = 0; // Initialize skipread to 0
+    FragmentSequence[fragmentLength] = '\0';
 
     // assuming original fragments with N at first and last position is more likely to originate from heterochromatin regions fully consisting of N
     if(FragmentSequence[0]=='N' && FragmentSequence[(int)strlen(FragmentSequence)-1]=='N'){
       skipread = 1;
-      memset(FragmentSequence,0,strlen(FragmentSequence));
+      memset(FragmentSequence,0,LENS);
       sampled_skipped++;
       continue;
     }
@@ -315,6 +346,7 @@ void* Sampling_threads(void *arg) {
 
     // copy part of the DNA molecule into sequencing reads for both single-end and paired-end
     for (int FragNo = 0+Groupshift; FragNo < FragTotal; FragNo+=iter){
+      skipread = 0; // Reset for each fragment iteration
       qual_r1[0] = qual_r2[0] = seq_r1[0] = seq_r2[0] = '\0';
 
       if(SE==struct_obj->SeqType){

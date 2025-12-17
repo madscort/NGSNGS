@@ -417,7 +417,7 @@ int main(int argc,char **argv){
       doMisMatchErr,mypars->SubProfile,MisMatchLength,mypars->MisMatchMatrix_bdam,mypars->M3outname,
       PMDParam,DoNonBiotin,DoBiotin,mypars->Duplicates,
       mypars->mutationrate,mypars->referencevariations,mypars->generations,mypars->VariantDumpFile,
-      mypars->vcffile,mypars->HeaderIndiv,mypars->NameIndiv,mypars->VCFDumpFile,mypars->CaptureVCF,mypars->linkage,
+      mypars->vcffile,mypars->HeaderIndiv,mypars->NameIndiv,mypars->VCFDumpFile,mypars->AppliedVariantFile,mypars->CaptureVCF,mypars->linkage,
       IndelFuncParam,DoIndel,mypars->IndelDumpFile);
 
     /*

@@ -99,6 +99,7 @@ fasta_sampler *fasta_sampler_alloc_full(const char *fa){
   // Initialize the number of references and allocate memory for sequence data,
   fs->BedReferenceEntries = NULL; // the bedreference is part of the struct but remains unused in this function
   fs->BedReferenceCount = 0;
+  fs->bedIncludeMode = false;
   
   fs->nref = faidx_nseq(fs->fai);
   fs->seqs = new char* [fs->nref];
@@ -186,6 +187,7 @@ fasta_sampler *fasta_sampler_alloc_subset(const char *fa,const char *SpecificChr
     }
   }
   fs->nref = at;
+  fs->bedIncludeMode = false;
   
   for(int i=0;i<fs->nref;i++)
     fs->realnameidx[i] = i;
@@ -242,6 +244,9 @@ fasta_sampler *fasta_sampler_alloc_bedentry(const char *fa,const char *bedfilena
   //Check if merged regions of interest is present within provided reference file
   fs->BedReferenceEntries = checkbedentriesfasta(fs,mergedEntries,mergedCount,&fs->BedReferenceCount);
 
+  fs->bedIncludeMode = true;
+  fs->BedRegionsByChrom.clear();
+
   //for (int i = 0; i < fs->BedReferenceCount; i++){fprintf(stderr,"merge bed file information bed entry \t%s\t%d\t%d\n", fs->BedReferenceEntries[i].chromosome, fs->BedReferenceEntries[i].start, fs->BedReferenceEntries[i].end);}
 
   free(mergedEntries);
@@ -288,6 +293,10 @@ fasta_sampler *fasta_sampler_alloc_bedentry(const char *fa,const char *bedfilena
     int length = snprintf(NULL, 0, "%s:%d-%d", fs->BedReferenceEntries[i].chromosome, bedflankstart, bedflankend);
     fs->seqs_names[i] = (char*) malloc((length + 1) * sizeof(char));
     sprintf(fs->seqs_names[i], "%s:%d-%d", fs->BedReferenceEntries[i].chromosome, bedflankstart, bedflankend);
+  }
+
+  for(int i=0;i<fs->nref;i++){
+    fs->BedRegionsByChrom[fs->BedReferenceEntries[i].chromosome].push_back(i);
   }
 
   // Fetch and store sequence names, lengths, and actual sequences for regions of interest
@@ -349,6 +358,8 @@ fasta_sampler *fasta_sampler_alloc_maskbedentry(const char *fa,const char *bedfi
 
   //Exclude (mask) merged genomic regions from the provided reference file
   fs->BedReferenceEntries = maskbedentriesfasta(fs,mergedEntries,mergedCount,&fs->BedReferenceCount);
+  fs->bedIncludeMode = false;
+  fs->BedRegionsByChrom.clear();
   
   //fprintf(stderr,"\t-> Input bed file had %d regions, after merging the overlapping regions there is %d and post-filtering there is %d\n",BedEntryCount,mergedCount,fs->BedReferenceCount);
   //for (int i = 0; i < fs->BedReferenceCount; i++){fprintf(stderr,"merge bed file information mask bed entry \t%s\t%d\t%d\n", fs->BedReferenceEntries[i].chromosome, fs->BedReferenceEntries[i].start, fs->BedReferenceEntries[i].end);}
@@ -627,6 +638,11 @@ char *sample(fasta_sampler *fs,mrand_t *mr,char **chromoname,int &chr_idx,int &p
   if(posE>=fs->seqs_l[chr_idx] && simmode == 0){
     posE=fs->seqs_l[chr_idx];
     posB=posE-fraglength;
+    // Ensure posB doesn't go negative for short sequences
+    if(posB < 0) {
+      posB = 0;
+      posE = (fraglength < fs->seqs_l[chr_idx]) ? fraglength : fs->seqs_l[chr_idx];
+    }
   }
   
   // extract and return the sequence of the selected chromosome
@@ -801,6 +817,13 @@ int extend_fasta_sampler(fasta_sampler *fs,int fs_chr_idx,int ploidy,const char*
     int *seqs_l = new int[nref];
     int *realnameidx = new int[nref];
     int *pldmap = new int[5];
+    
+    // Zero-initialize all new arrays
+    memset(seqs, 0, sizeof(char*)*nref);
+    memset(seqs_names, 0, sizeof(char*)*nref);
+    memset(seqs_l, 0, sizeof(int)*nref);
+    memset(realnameidx, 0, sizeof(int)*nref);
+    memset(pldmap, 0, sizeof(int)*5);
 
     // Copy existing sequences and metadata
     for(int i=0;i<fs->nref;i++){
@@ -828,7 +851,7 @@ int extend_fasta_sampler(fasta_sampler *fs,int fs_chr_idx,int ploidy,const char*
     pldmap[0] = fs_chr_idx;
     for(int i=1;i<ploidy;i++) {
       snprintf(buf,1024,"%s_%s_allele_%d",fs->seqs_names[fs_chr_idx],sample_name,i);
-      fs->seqs[fs->nref+i-1] = strdup(seqs[fs_chr_idx]);
+      fs->seqs[fs->nref+i-1] = strdup(fs->seqs[fs_chr_idx]);
       fs->seqs_names[fs->nref+i-1] = strdup(buf);
       fs->seqs_l[fs->nref+i-1] = fs->seqs_l[fs_chr_idx];
       fs->char2idx[fs->seqs_names[fs->nref+i-1]] =fs->nref+i-1;

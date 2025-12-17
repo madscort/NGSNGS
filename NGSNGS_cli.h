@@ -22,6 +22,7 @@ typedef struct{
   char *VCFDumpFile;          //prefix for internal file recording potential variations to reference genome
   char *IndelDumpFile;        //prefix for internal file recording of sequencing errors specific for indels
   char *VariantDumpFile;      //prefix for internal file recording the stochastic variations added to reference genome
+  char *AppliedVariantFile;   //file recording VCF variants that were successfully applied to the reference
   char *Reference;            //full filename for reference fasta
   seqtype_e seq_type;         //singleend or paired end.
   char *Adapter1;             //actual adapter sequence, R1, not flipped, reversed or completemented
